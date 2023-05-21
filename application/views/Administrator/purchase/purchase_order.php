@@ -600,12 +600,12 @@
                 }
 
                 let product = {
-                    productId: this.selectedProduct.Product_SlNo,
-                    name: this.selectedProduct.Product_Name,
+                    productId   : this.selectedProduct.Product_SlNo,
+                    name        : this.selectedProduct.Product_Name,
                     purchaseRate: this.selectedProduct.Product_Purchase_Rate,
-                    salesRate: this.selectedProduct.Product_SellingPrice,
-                    quantity: this.selectedProduct.quantity,
-                    total: this.selectedProduct.total
+                    salesRate   : this.selectedProduct.Product_SellingPrice,
+                    quantity    : this.selectedProduct.quantity,
+                    total       : this.selectedProduct.total
                 }
 
                 if (product.productId == '') {

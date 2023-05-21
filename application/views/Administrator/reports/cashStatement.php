@@ -158,7 +158,7 @@
                             <td>{{ payment.CPayment_invoice }}</td>
                             <td>{{ payment.CPayment_date }}</td>
                             <td>{{ payment.Customer_Name }}</td>
-                            <td style="text-align:right;">{{ payment.CPayment_amount | decimal }}</td>
+                            <td style="text-align:right;">{{ payment.CPayment_amount_cash | decimal }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -190,7 +190,7 @@
                             <td>{{ payment.SPayment_invoice }}</td>
                             <td>{{ payment.SPayment_date }}</td>
                             <td>{{ payment.Supplier_Name }}</td>
-                            <td style="text-align:right;">{{ payment.SPayment_amount | decimal }}</td>
+                            <td style="text-align:right;">{{ payment.SPayment_amount_cash | decimal }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -426,7 +426,7 @@
                             <td>{{ purchase.PurchaseMaster_InvoiceNo }}</td>
                             <td>{{ purchase.PurchaseMaster_OrderDate }}</td>
                             <td>{{ purchase.Supplier_Name }}</td>
-                            <td style="text-align:right;">{{ purchase.PurchaseMaster_PaidAmount | decimal }}</td>
+                            <td style="text-align:right;">{{ purchase.PurchaseMaster_cashPaid | decimal }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -459,7 +459,7 @@
                             <td>{{ payment.SPayment_invoice }}</td>
                             <td>{{ payment.SPayment_date }}</td>
                             <td>{{ payment.Supplier_Name }}</td>
-                            <td style="text-align:right;">{{ payment.SPayment_amount | decimal }}</td>
+                            <td style="text-align:right;">{{ payment.SPayment_amount_cash | decimal }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -491,7 +491,7 @@
                             <td>{{ payment.CPayment_invoice }}</td>
                             <td>{{ payment.CPayment_date }}</td>
                             <td>{{ payment.Customer_Name }}</td>
-                            <td style="text-align:right;">{{ payment.CPayment_amount | decimal }}</td>
+                            <td style="text-align:right;">{{ payment.CPayment_amount_cash | decimal }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -761,27 +761,27 @@
             },
             totalPurchase() {
                 return this.purchases.reduce((prev, curr) => {
-                    return prev + parseFloat(curr.PurchaseMaster_PaidAmount)
+                    return prev + parseFloat(curr.PurchaseMaster_cashPaid)
                 }, 0).toFixed(2);
             },
             totalReceivedFromCustomers() {
                 return this.receivedFromCustomers.reduce((prev, curr) => {
-                    return prev + parseFloat(+curr.CPayment_amount_cash + +curr.CPayment_amount_bank)
+                    return prev + parseFloat(curr.CPayment_amount_cash)
                 }, 0).toFixed(2);
             },
             totalPaidToCustomers() {
                 return this.paidToCustomers.reduce((prev, curr) => {
-                    return prev + parseFloat(+curr.CPayment_amount_cash + +curr.CPayment_amount_bank)
+                    return prev + parseFloat(curr.CPayment_amount_cash)
                 }, 0).toFixed(2);
             },
             totalReceivedFromSuppliers() {
                 return this.receivedFromSuppliers.reduce((prev, curr) => {
-                    return prev + parseFloat(+curr.SPayment_amount_cash + +curr.SPayment_amount_bank)
+                    return prev + parseFloat(curr.SPayment_amount_cash)
                 }, 0).toFixed(2);
             },
             totalPaidToSuppliers() {
                 return this.paidToSuppliers.reduce((prev, curr) => {
-                    return prev + parseFloat(+curr.SPayment_amount_cash + +curr.SPayment_amount_bank)
+                    return prev + parseFloat(curr.SPayment_amount_cash)
                 }, 0).toFixed(2);
             },
             totalCashReceived() {
@@ -900,8 +900,8 @@
             getSales() {
                 axios.post('/get_sales', this.filter)
                     .then(res => {
-                        this.sales = res.data.sales.filter((p) => {
-                            return p.SaleMaster_cashPaid > 0;
+                        this.sales = res.data.sales.filter((sale) => {
+                            return parseFloat(sale.SaleMaster_cashPaid) > 0;
                         });
                     })
             },
@@ -909,7 +909,9 @@
             getPurchases() {
                 axios.post('/get_purchases', this.filter)
                     .then(res => {
-                        this.purchases = res.data.purchases;
+                        this.purchases = res.data.purchases.filter((purchase) => {
+                            return parseFloat(purchase.PurchaseMaster_bankPaid) > 0;
+                        });
                     })
             },
 
@@ -921,7 +923,7 @@
                 }
                 axios.post('/get_customer_payments', filter)
                     .then(res => {
-                        this.receivedFromCustomers = res.data.filter(p => p.CPayment_Paymentby != 'bank');
+                        this.receivedFromCustomers = res.data.filter(rc => parseFloat(rc.CPayment_amount_cash) > 0);
                     })
             },
 
@@ -933,7 +935,7 @@
                 }
                 axios.post('/get_customer_payments', filter)
                     .then(res => {
-                        this.paidToCustomers = res.data.filter(p => p.CPayment_Paymentby != 'bank');
+                        this.paidToCustomers = res.data.filter(pc => parseFloat(pc.CPayment_amount_cash) > 0);
                     })
             },
 
@@ -945,7 +947,7 @@
                 }
                 axios.post('/get_supplier_payments', filter)
                     .then(res => {
-                        this.paidToSuppliers = res.data.filter(p => p.SPayment_Paymentby != 'bank');
+                        this.paidToSuppliers = res.data.filter(ps => parseFloat(ps.SPayment_amount_cash) > 0);
                     })
             },
 
@@ -957,7 +959,7 @@
                 }
                 axios.post('/get_supplier_payments', filter)
                     .then(res => {
-                        this.receivedFromSuppliers = res.data.filter(p => p.SPayment_Paymentby != 'bank');
+                        this.receivedFromSuppliers = res.data.filter(rs => parseFloat(rs.SPayment_amount_cash) > 0);
                     })
             },
 

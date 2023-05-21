@@ -1122,7 +1122,7 @@ class Account extends CI_Controller
         }
 
         if (isset($data->ledger)) {
-            $order = "transaction_date, sequence, id";
+            $order = "transaction_date, sequence, id desc";
         }
 
         $transactions = $this->db->query("
@@ -1169,7 +1169,6 @@ class Account extends CI_Controller
                 where bt.status = 1
                 and bt.transaction_type = 'withdraw'
                 and bt.branch_id = " . $this->session->userdata('BRANCHid') . "
-                
 
                 UNION
                 select
@@ -1274,7 +1273,7 @@ class Account extends CI_Controller
                     concat('Product Sales - ', c.Customer_Name, ' (', c.Customer_Code, ')') as description, 
                     sm.account_id,
                     sm.SaleMaster_SaleDate as transaction_date,
-                    'payment_type' as transaction_type,
+                    'deposit' as transaction_type,
                     sm.SaleMaster_bankPaid as deposit,
                     0.00 as withdraw,
                     sm.SaleMaster_Description as note,
@@ -1289,6 +1288,30 @@ class Account extends CI_Controller
                 where sm.account_id is not null
                 and sm.Status = 'a'
                 and sm.SaleMaster_branchid = " . $this->session->userdata('BRANCHid') . "
+
+                UNION
+                select
+                    'h' as sequence,
+                    pm.PurchaseMaster_SlNo as id,
+                    concat('Product Purchase - ', s.Supplier_Name, ' (', s.Supplier_Code, ')') as description, 
+                    pm.account_id,
+                    pm.PurchaseMaster_OrderDate as transaction_date,
+                    'withdraw' as transaction_type,
+                    0.00 as deposit,
+                    pm.PurchaseMaster_bankPaid as withdraw,
+                    pm.PurchaseMaster_Description as note,
+                    ac.account_name,
+                    ac.account_number,
+                    ac.bank_name,
+                    ac.branch_name,
+                    0.00 as balance
+                from tbl_purchasemaster pm
+                join tbl_bank_accounts ac on ac.account_id = pm.account_id
+                join tbl_supplier s on s.Supplier_SlNo = pm.Supplier_SlNo
+                where pm.account_id is not null
+                and pm.status = 'a'
+                and pm.PurchaseMaster_BranchID = " . $this->session->userdata('BRANCHid') . "
+                group by pm.PurchaseMaster_SlNo
             ) as tbl
             where 1 = 1 $clauses
             order by $order
@@ -1419,11 +1442,11 @@ class Account extends CI_Controller
             from tbl_salesmaster sm 
             join tbl_customer c on c.Customer_SlNo = sm.SalseCustomer_IDNo
             where sm.Status = 'a'
+            and sm.SaleMaster_cashPaid > 0
             and sm.SaleMaster_branchid = '$this->brunch'
             and sm.SaleMaster_SaleDate between '$data->fromDate' and '$data->toDate'
             
-            UNION
-            
+            UNION            
             select 
                 cp.CPayment_id as id,
                 cp.CPayment_date as date,
@@ -1435,7 +1458,7 @@ class Account extends CI_Controller
             where cp.CPayment_status = 'a'
             and cp.CPayment_brunchid = '$this->brunch'
             and cp.CPayment_TransactionType = 'CR'
-            and cp.CPayment_Paymentby != 'bank'
+            and cp.CPayment_amount_cash > 0
             and cp.CPayment_date between '$data->fromDate' and '$data->toDate'
             
             UNION
@@ -1484,8 +1507,7 @@ class Account extends CI_Controller
             and bt.transaction_type = 'withdraw'
             and bt.transaction_date between '$data->fromDate' and '$data->toDate'
             
-            UNION
-            
+            UNION            
             select 
                 bt.transaction_id as id,
                 bt.transaction_date as date,
@@ -1542,16 +1564,16 @@ class Account extends CI_Controller
             /* Cash out */
             
             UNION
-            
             select 
                 pm.PurchaseMaster_SlNo as id,
                 pm.PurchaseMaster_OrderDate as date,
                 concat('Purchase - ', pm.PurchaseMaster_InvoiceNo, ' - ', s.Supplier_Name, ' (', s.Supplier_Code, ')', ' - Bill: ', pm.PurchaseMaster_TotalAmount) as description,
                 0.00 as in_amount,
-                pm.PurchaseMaster_PaidAmount as out_amount
+                pm.PurchaseMaster_cashPaid as out_amount
             from tbl_purchasemaster pm 
             join tbl_supplier s on s.Supplier_SlNo = pm.Supplier_SlNo
             where pm.status = 'a'
+            and pm.PurchaseMaster_cashPaid > 0
             and pm.PurchaseMaster_BranchID = '$this->brunch'
             and pm.PurchaseMaster_OrderDate between '$data->fromDate' and '$data->toDate'
             
@@ -1567,12 +1589,10 @@ class Account extends CI_Controller
             join tbl_supplier s on s.Supplier_SlNo = sp.SPayment_customerID
             where sp.SPayment_TransactionType = 'CP'
             and sp.SPayment_status = 'a'
-            and sp.SPayment_Paymentby != 'bank'
             and sp.SPayment_brunchid = '$this->brunch'
             and sp.SPayment_date between '$data->fromDate' and '$data->toDate'
             
-            UNION
-            
+            UNION            
             select 
                 cp.CPayment_id as id,
                 cp.CPayment_date as date,
@@ -1583,7 +1603,7 @@ class Account extends CI_Controller
             join tbl_customer c on c.Customer_SlNo = cp.CPayment_customerID
             where cp.CPayment_TransactionType = 'CP'
             and cp.CPayment_status = 'a'
-            and cp.CPayment_Paymentby != 'bank'
+            and cp.CPayment_amount_cash > 0
             and cp.CPayment_brunchid = '$this->brunch'
             and cp.CPayment_date between '$data->fromDate' and '$data->toDate'
             

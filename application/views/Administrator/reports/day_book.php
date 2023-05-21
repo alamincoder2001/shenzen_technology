@@ -613,6 +613,7 @@
 					date: this.filter.dateFrom
 				}).then(res => {
 					this.openingBalance = res.data;
+					console.log(res.data);
 				})
 			},
 
